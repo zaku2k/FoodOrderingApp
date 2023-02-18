@@ -1,0 +1,24 @@
+{% extends 'food_app/base.html' %}
+
+{% block content %}
+
+    <h1>Główna</h1>
+
+        <a href="{{ add_to_menu_url }}">Dodaj do menu</a>
+        <a href="{% url 'order' %}">Zamów</a>
+        <a href="{% url 'register' %}">Rejestracja</a>
+        <a href="{% url 'login' %}">Logowanie</a>
+        <a href="{% url 'logout' %}">Wyloguj</a>
+
+    {% if username %}
+        <p>Zalogowany jako: {{ username }}</p>
+    {% endif %}
+
+    {% for dish in dishes %}
+            <h2>{{ dish.name }}</h2>
+            <p>{{ dish.description }}</p>
+            <p>Cena: {{ dish.net_price }} zł</p>
+            <img src="{{ dish.image.url }}" alt="{{ dish.name }}"/>
+    {% endfor %}
+
+{% endblock %}
