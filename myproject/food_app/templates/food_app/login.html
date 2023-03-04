@@ -3,10 +3,12 @@
 {% block content %}
 
     <h2>Zaloguj się</h2>
+    <h4>Jeżeli chcesz coś zamówić z naszej strony zaloguj się :)</h4>
     <form method="post">
       {% csrf_token %}
       {{ form.as_p }}
       <button type="submit">Zaloguj się</button>
     </form>
-
+    <h3>Jeżeli nie masz konta : <a href="{% url 'register' %}">Zarejestruj się</a></h3>
+    <h3><a href="{% url 'home' %}">Strona główna</a></h3>
 {% endblock %}

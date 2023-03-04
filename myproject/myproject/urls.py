@@ -15,18 +15,23 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
-from food_app.views import HomeView, RegisterView, LoginView, LogoutView, OrderView
+from food_app.views import HomeView, RegisterView, LoginView, LogoutView, OrderView, OrderSuccessView, OrderHistoryView
 from django.conf import settings
 from django.conf.urls.static import static
 
 
+app_name = 'food_app'
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', HomeView.as_view(), name='home'),
+    path('home/', HomeView.as_view(), name='home'),
     path('register/', RegisterView.as_view(), name='register'),
     path('login/', LoginView.as_view(), name='login'),
     path('logout/', LogoutView.as_view(), name='logout'),
     path('order/', OrderView.as_view(), name='order'),
+    path('order_success/', OrderSuccessView.as_view(), name='order_success'),
+    path('order_history/', OrderHistoryView.as_view(), name='order_history'),
 ]
 
 urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

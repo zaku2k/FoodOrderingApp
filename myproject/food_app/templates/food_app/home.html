@@ -2,10 +2,13 @@
 
 {% block content %}
 
-    <h1>Główna</h1>
+    <h1>Strona Główna</h1>
 
-        <a href="{{ add_to_menu_url }}">Dodaj do menu</a>
+        {% if user.is_authenticated and user.is_staff %}
+        <a href="{% url 'admin:index' %}">Dodaj do menu (Admin)</a>
+        {% endif %}
         <a href="{% url 'order' %}">Zamów</a>
+        <a href="{% url 'order_history' %}">Historia zamówień</a>
         <a href="{% url 'register' %}">Rejestracja</a>
         <a href="{% url 'login' %}">Logowanie</a>
         <a href="{% url 'logout' %}">Wyloguj</a>
@@ -13,6 +16,8 @@
     {% if username %}
         <p>Zalogowany jako: {{ username }}</p>
     {% endif %}
+
+    <h2>Prezentacja dań:</h2>
 
     {% for dish in dishes %}
             <h2>{{ dish.name }}</h2>

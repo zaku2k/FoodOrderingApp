@@ -1,0 +1,24 @@
+{% extends 'food_app/base.html' %}
+
+{% block content %}
+<h1>Zamówienie złożone!</h1>
+
+<p>Twoje zamówienie:</p>
+<ul>
+{% for ordered_dish in order.ordersdish_set.all %}
+    <li>{{ ordered_dish.dish.name }} - {{ ordered_dish.count }} sztuk</li>
+{% endfor %}
+</ul>
+
+<p>Dane klienta:</p>
+<ul>
+  <li>Imię: {{ order.customer_name }}</li>
+  <li>Adres e-mail: {{ order.customer_email }}</li>
+  <li>Numer telefonu: {{ order.customer_phone }}</li>
+  <li>Adres dostawy: {{ order.customer_address }}</li>
+</ul>
+
+<p>Cena całkowita: {{ order.total_price }} zł</p>
+<h3><a href="{% url 'home' %}">Strona główna</a></h3>
+
+{% endblock %}

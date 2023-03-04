@@ -1,13 +1,15 @@
-from django.forms import formset_factory
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db.models import Count
+from django.http import HttpResponseNotAllowed
 from django.shortcuts import render, redirect
-from django.views.generic import View
+from django.utils.decorators import method_decorator
+from django.views.generic import View, ListView, TemplateView
 from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.contrib import messages
 from .models import Dish, Orders, OrdersDish
-from .forms import OrderForm, OrderDishForm
-from django.contrib.auth.decorators import login_required
-from django.utils.decorators import method_decorator
+from .forms import OrdersForm
 
 
 class HomeView(View):
@@ -18,6 +20,7 @@ class HomeView(View):
         ctx = {
             'add_to_menu_url': 'add_to_menu',
             'place_order_url': 'place_order',
+            'order_history_url': 'order_history',
             'register_url': 'register',
             'login_url': 'login',
             'logout_url': 'logout',
@@ -74,32 +77,81 @@ class LogoutView(View):
         return redirect('login')
 
 
+@method_decorator(login_required, name='dispatch')
 class OrderView(View):
     template_name = 'food_app/order.html'
+    success_template_name = 'food_app/order_success.html'
+    form_class = OrdersForm
 
-    @method_decorator(login_required)
-    def get(self, request):
-        OrderDishFormSet = formset_factory(OrderDishForm)
-        form = OrderForm()
-        formset = OrderDishFormSet()
-        dishes = Dish.objects.all()
-        return render(request, 'food_app/order.html', {'form': form, 'formset': formset, 'dishes': dishes})
+    def get(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect('login')
 
-    @method_decorator(login_required)
+        dishes = Dish.objects.prefetch_related('ordersdish_set').annotate(num_orders=Count('ordersdish')).all()
+        form = self.form_class(initial={'counts': [1] * len(dishes)})
+        context = {
+            'dishes': dishes,
+            'form': form,
+        }
+        return render(request, self.template_name, context)
+
     def post(self, request):
-        OrderDishFormSet = formset_factory(OrderDishForm)
-        form = OrderForm(request.POST)
-        formset = OrderDishFormSet(request.POST)
-        if form.is_valid() and formset.is_valid():
-            order = form.save(commit=False)
-            order.user = request.user
-            order.save()
+        if request.method == 'POST':
+            customer_name = request.POST.get('customer_name')
+            customer_email = request.POST.get('customer_email')
+            customer_phone = request.POST.get('customer_phone')
+            customer_address = request.POST.get('customer_address')
 
-            for form in formset:
-                dish = form.cleaned_data.get('dish')
-                count = form.cleaned_data.get('count')
-                OrdersDish.objects.create(dish=dish, orders=order, count=count, user=request.user)
+            orders = Orders.objects.create(
+                customer_name=customer_name,
+                customer_email=customer_email,
+                customer_phone=customer_phone,
+                customer_address=customer_address
+            )
 
-            return redirect('home')
+            total_price = 0
+            for i in range(len(request.POST.getlist('dishes'))):
+                dish_id = int(request.POST.getlist('dishes')[i])
+                count = int(request.POST.getlist('counts_{}'.format(i))[0])
+                dish = Dish.objects.get(pk=dish_id)
+                price = dish.net_price * count
+                total_price += dish.net_price * count
+                OrdersDish.objects.create(
+                    orders=orders,
+                    dish=dish,
+                    count=count,
+                    price=price,
+                )
 
-        return render(request, 'food_app/order.html', {'form': form, 'formset': formset})
+            orders.total_price = total_price
+            orders.save()
+
+            return render(request, self.success_template_name, {'order': orders})
+
+        return HttpResponseNotAllowed(['POST'])
+
+
+class OrderSuccessView(TemplateView):
+    template_name = 'food_app/order_success.html'
+
+    def get(self, request, *args, **kwargs):
+        order_id = kwargs['order_id']
+        order = Orders.objects.get(pk=order_id)
+        context = {
+            'order': order,
+        }
+        return render(request, self.template_name, context)
+
+
+class OrderHistoryView(LoginRequiredMixin, ListView):
+    template_name = 'food_app/order_history.html'
+    model = Orders
+    context_object_name = 'orders'
+    paginate_by = 10
+
+    def get_queryset(self):
+        return super().get_queryset().filter(ordersdish__user=self.request.user).order_by('-created_at').distinct()
+
+
+
+

@@ -8,5 +8,6 @@
       {{ form.as_p }}
       <button type="submit">Zarejestruj się</button>
     </form>
-
+    <h3>Jeżeli masz już konto : <a href="{% url 'login' %}">Zaloguj się</a></h3>
+    <h3><a href="{% url 'home' %}">Strona główna</a></h3>
 {% endblock %}

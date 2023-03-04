@@ -8,5 +8,5 @@ class DishAdmin(admin.ModelAdmin):
 
 admin.site.register(Dish, DishAdmin)
 admin.site.register(Orders)
-
+admin.site.register(OrdersDish)
 

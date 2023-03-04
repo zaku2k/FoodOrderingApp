@@ -1,0 +1,54 @@
+{% extends 'food_app/base.html' %}
+
+{% block content %}
+    <h1>Historia zamówień</h1>
+    <h3><a href="{% url 'home' %}">Strona główna</a></h3>
+    {% if orders %}
+        <table class="table" border="1">
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>Nazwa klienta</th>
+                    <th>Adres e-mail</th>
+                    <th>Telefon</th>
+                    <th>Adres</th>
+                    <th>Cena całkowita</th>
+                    <th>Zamówione dania</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for order in orders %}
+                    <tr>
+                        <td>{{ order.created_at }}</td>
+                        <td>{{ order.customer_name }}</td>
+                        <td>{{ order.customer_email }}</td>
+                        <td>{{ order.customer_phone }}</td>
+                        <td>{{ order.customer_address }}</td>
+                        <td>{{ order.total_price }}</td>
+                        <td>
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Nazwa dania</th>
+                                        <th>Ilość</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for dish in order.ordersdish_set.all %}
+                                        <tr>
+                                            <td>{{ dish.dish.name }}</td>
+                                            <td>{{ dish.dish.description }}</td>
+                                            <td>{{ dish.dish.net_price }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>Brak zamówień do wyświetlenia.</p>
+    {% endif %}
+{% endblock %}
