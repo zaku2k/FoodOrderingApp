@@ -77,17 +77,22 @@ class LogoutView(View):
         return redirect('login')
 
 
+# @method_decorator(login_required, name='dispatch') is a decorator that is used to enforce authentication for accessing the OrderView.
+# It adds the login_required decorator to the dispatch method, which is called for every HTTP request.
 @method_decorator(login_required, name='dispatch')
 class OrderView(View):
     template_name = 'food_app/order.html'
     success_template_name = 'food_app/order_success.html'
     form_class = OrdersForm
 
+    #The get method retrieves the list of dishes along with the number of times each dish has been ordered,
+    # creates a form instance with initial values, and renders the template with the form and dish list.
     def get(self, request, *args, **kwargs):
         if not request.user.is_authenticated:
             return redirect('login')
 
         dishes = Dish.objects.prefetch_related('ordersdish_set').annotate(num_orders=Count('ordersdish')).all()
+        #creates a form instance with initial values.
         form = self.form_class(initial={'counts': [1] * len(dishes)})
         context = {
             'dishes': dishes,
@@ -95,6 +100,10 @@ class OrderView(View):
         }
         return render(request, self.template_name, context)
 
+    # The post method is called when the user submits the order form.
+    # It creates a new Orders instance with the customer's details and calculates the total price of the order.
+    # It then creates a new OrdersDish instance for each selected dish and saves them to the database.
+    # Finally, it renders the success template with the order details.
     def post(self, request):
         if request.method == 'POST':
             customer_name = request.POST.get('customer_name')
@@ -110,6 +119,7 @@ class OrderView(View):
             )
 
             total_price = 0
+            #goes through every item on the food list
             for i in range(len(request.POST.getlist('dishes'))):
                 dish_id = int(request.POST.getlist('dishes')[i])
                 count = int(request.POST.getlist('counts_{}'.format(i))[0])
@@ -123,17 +133,20 @@ class OrderView(View):
                     price=price,
                 )
 
+            #updates the total cost of the order
             orders.total_price = total_price
             orders.save()
 
             return render(request, self.success_template_name, {'order': orders})
 
         return HttpResponseNotAllowed(['POST'])
+        #if the request method is not POST, the function returns a 405 response
 
 
 class OrderSuccessView(TemplateView):
     template_name = 'food_app/order_success.html'
 
+    #The get function retrieves the details of the order with the given ID and renders an HTML template with this information.
     def get(self, request, *args, **kwargs):
         order_id = kwargs['order_id']
         order = Orders.objects.get(pk=order_id)
@@ -149,6 +162,7 @@ class OrderHistoryView(LoginRequiredMixin, ListView):
     context_object_name = 'orders'
     paginate_by = 10
 
+    #The get_queryset method returns a list of Orders objects that contain at least one OrdersDish owned by the user, sorted in descending order by creation date.
     def get_queryset(self):
         return super().get_queryset().filter(ordersdish__user=self.request.user).order_by('-created_at').distinct()
 

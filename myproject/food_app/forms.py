@@ -15,9 +15,12 @@ class OrdersForm(forms.ModelForm):
         model = Orders
         fields = ['customer_name', 'customer_email', 'customer_phone', 'customer_address', 'dishes', 'total_price']
 
+
+    #sets the value of the counts field to a list of length equal to the number of dishes available.
     def __init__(self, *args, **kwargs):
         self.user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
+        #sets the initial value for each field of the "counts" form to "1"
         self.initial['counts'] = [1] * len(self.fields['dishes'].queryset)
 
     def save(self, commit=True):
@@ -26,6 +29,11 @@ class OrdersForm(forms.ModelForm):
             order.save()
 
             # Only update total_price if it's not a new order
+
+            #calculates total_price, i.e. the total cost of the order based on information from the form.
+            # If the currently edited order is not new,
+            # i.e. it already exists in the database,
+            # then the method updates the total_price value in the database.
             if self.instance:
                 total_price = sum(dish.net_price * count for dish, count in
                                   zip(self.cleaned_data['dishes'], self.cleaned_data['counts']) if count > 0)

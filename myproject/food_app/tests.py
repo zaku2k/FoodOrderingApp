@@ -113,47 +113,109 @@ class LogoutViewTestCase(TestCase):
 
 class OrderViewTestCase(TestCase):
     def setUp(self):
-        self.client = Client()
-        self.user = User.objects.create_user(username='testuserr2', password='testpass')
-        self.client.login(username='testuserr2', password='testpass')
-        self.dish = Dish.objects.create(name='Test Dish', description='Test Description', net_price='10.99')
-        self.order = Orders.objects.create(
-            customer_name='Test Customer',
-            customer_email='test@test.com',
-            customer_phone='1234567890',
-            customer_address='Test Address',
+        self.password = 'testpassword'
+        self.user = get_user_model().objects.create_user(
+            username='testuser',
+            password=self.password
         )
-        self.order.user = self.user
-        self.order.save()
-        OrdersDish.objects.create(
-            dish=self.dish,
-            orders=self.order,
-            count=1,
-            price=self.dish.net_price,
-            user=self.user
+        self.dish_1 = Dish.objects.create(
+            name='Pizza',
+            net_price=25,
+            description='Delicious pizza',
         )
-        self.order_data = {
-            'customer_name': 'Test Customer',
-            'customer_email': 'test@test.com',
-            'customer_phone': '1234567890',
+        self.dish_2 = Dish.objects.create(
+            name='Burger',
+            net_price=15,
+            description='Juicy burger',
+        )
+
+    def test_order_form_submission(self):
+        self.client.login(username=self.user.username, password=self.password)
+
+        order_data = {
+            'customer_name': 'Test User',
+            'customer_email': 'testuser@test.com',
+            'customer_phone': '123456789',
             'customer_address': 'Test Address',
-            'dishes': [self.dish.id],
+            'dishes': [self.dish_1.pk, self.dish_2.pk],
+            'counts_{}'.format(self.dish_1.pk): [2],
+            'counts_{}'.format(self.dish_2.pk): [3],
         }
 
-    def test_order_creation(self):
-        response = self.client.post('/order/', data=self.order_data)
+        response = self.client.post('/order/', data=order_data)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Your order has been successfully submitted')
+        self.assertEqual(Orders.objects.count(), 1)
+        self.assertEqual(OrdersDish.objects.count(), 2)
+
+
+class OrderSuccessViewTestCase(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.dish_1 = Dish.objects.create(
+            name='Pizza',
+            net_price=25,
+            description='Delicious pizza',
+        )
+        self.dish_2 = Dish.objects.create(
+            name='Burger',
+            net_price=15,
+            description='Juicy burger',
+        )
+        self.order = Orders.objects.create(
+            customer_name='Test User',
+            customer_email='testuser@test.com',
+            customer_phone='123456789',
+            customer_address='Test Address',
+            total_price=85,
+        )
+        self.order_dish_1 = self.order.ordersdish_set.create(
+            dish=self.dish_1,
+            count=2,
+            user=None,
+            price=50,
+        )
+        self.order_dish_2 = self.order.ordersdish_set.create(
+            dish=self.dish_2,
+            count=3,
+            user=None,
+            price=35,
+        )
+
+    def test_order_success_view(self):
+        url = reverse('order-success', args=[self.order.pk])
+        response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'food_app/order_success.html')
-        orders = Orders.objects.all()
-        self.assertEqual(len(orders), 2) # jedno zamówienie z testu, drugie z setUpTestData
-        orders_dish = OrdersDish.objects.all()
-        self.assertEqual(len(orders_dish), 2)
-        self.assertEqual(orders_dish[1].count, 1) # indeksowanie od 1, bo pierwsze zamówienie jest z setUpTestData
-        self.assertEqual(orders_dish[1].dish, self.dish)
-        self.assertEqual(orders_dish[1].orders, self.order)
-        self.assertEqual(orders_dish[1].user, self.user)
+        self.assertContains(response, 'Test User')
+        self.assertContains(response, 'testuser@test.com')
+        self.assertContains(response, '123456789')
+        self.assertContains(response, 'Test Address')
+        self.assertContains(response, 'Pizza')
+        self.assertContains(response, '2')
+        self.assertContains(response, 'Burger')
+        self.assertContains(response, '3')
+        self.assertContains(response, '85')
 
 
+class OrderHistoryViewTestCase(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.orders = Orders.objects.create(customer_name='Test Customer', customer_email='test@example.com',
+                                            customer_phone='1234567890', customer_address='Test Address',
+                                            total_price='10')
+        self.url = reverse('order-history')
+
+    def test_order_history_view(self):
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'food_app/order_history.html')
+        self.assertContains(response, 'Test Customer')
+        self.assertContains(response, 'test@example.com')
+        self.assertContains(response, '1234567890')
+        self.assertContains(response, 'Test Address')
+        self.assertContains(response, '10')
+        self.assertQuerysetEqual(response.context['orders'], [repr(self.orders)])
 
 
 
